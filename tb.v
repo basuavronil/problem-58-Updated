@@ -5,86 +5,76 @@ module tb_pipt_cache_hybrid;
     // Testbench Signals
     reg        clk;
     reg        rst_n;
-    reg        wr_en;
     reg [31:0] p_addr;
     wire [31:0] rdata;
     wire        hit;
 
-    // Instantiate the Hybrid PIPT Cache
+    // Instantiate Unit Under Test (UUT)
     pipt_cache_hybrid uut (
         .clk(clk),
         .rst_n(rst_n),
-        .wr_en(wr_en),
         .p_addr(p_addr),
         .rdata(rdata),
         .hit(hit)
     );
 
-    // Clock Generation (10ns period -> 100MHz clock)
+    // Clock Generation: 10ns period (100 MHz)
     always #5 clk = ~clk;
 
     initial begin
-        // Initialize Signals
+        // -------------------------------------------------------------
+        // Step 1: Initialize Inputs
+        // -------------------------------------------------------------
         clk    = 0;
         rst_n  = 0;
-        wr_en  = 0;
-        p_addr = 32'h00000000;
-
-        // Apply Reset
-        #15;
-        rst_n = 1;
-        #10;
+        p_addr = 32'h00012000; // Target Index 0 (Pre-loaded Tag: 0x00012)
 
         $display("--------------------------------------------------");
-        $display("       STARTING PIPT CACHE HYBRID TESTS           ");
+        $display("   STARTING PIPT CACHE RESET & LOOKUP TESTBENCH   ");
         $display("--------------------------------------------------");
 
-        // =========================================================
-        // Test 1: Hit Test (Access pre-loaded Index 0)
-        // Expected Tag: 0x00012 | Index: 0x00 | Expected Data: 12345678
-        // Address Format: [31:12] Tag = 00012 | [11:4] Index = 00 | [3:0] Offset = 0
-        // =========================================================
-        p_addr = 32'h00012000;
-        #10;
-        if (hit && (rdata == 32'h12345678)) begin
-            $display("[PASS] TEST 1 (Hit): Addr=%h -> Hit=%b, Data=%h", p_addr, hit, rdata);
+        // -------------------------------------------------------------
+        // Step 2: Verify Reset Protection (valid_bit = 0)
+        // -------------------------------------------------------------
+        #7; // Inside active reset window
+        if (hit == 1'b0) begin
+            $display("[PASS] During Reset: Hit is suppressed (hit = %b)", hit);
         end else begin
-            $display("[FAIL] TEST 1 (Hit): Addr=%h -> Hit=%b, Data=%h (Expected: 12345678)", p_addr, hit, rdata);
+            $display("[FAIL] During Reset: Hit asserted unexpectedly (hit = %b)", hit);
         end
 
-        // =========================================================
-        // Test 2: Miss Test (Wrong Tag at Index 2)
-        // Index 2 has pre-loaded Tag 0x000AB. We send Tag 0x99999.
-        // Address Format: [31:12] Tag = 99999 | [11:4] Index = 02 | [3:0] Offset = 0
-        // =========================================================
+        // -------------------------------------------------------------
+        // Step 3: Release Reset & Verify Valid Operations
+        // -------------------------------------------------------------
+        #8;
+        rst_n = 1; // De-assert reset (valid_bit becomes 1 on next posedge clk)
+        #10;       // Wait for 1 clock tick
+
+        // Test 1: Hit Check at Index 0 (Tag 0x00012)
+        p_addr = 32'h00012000;
+        #5; // Allow combinational logic to settle
+        if (hit && (rdata == 32'h12345678)) begin
+            $display("[PASS] Test 1 (Hit): Addr=%h -> Hit=%b, Data=%h", p_addr, hit, rdata);
+        end else begin
+            $display("[FAIL] Test 1 (Hit): Addr=%h -> Hit=%b, Data=%h (Expected: 12345678)", p_addr, hit, rdata);
+        end
+
+        // Test 2: Miss Check at Index 2 (Wrong Tag 0x99999)
         p_addr = 32'h99999020;
         #10;
         if (!hit) begin
-            $display("[PASS] TEST 2 (Miss): Addr=%h -> Hit=%b (Correct Miss)", p_addr, hit);
+            $display("[PASS] Test 2 (Miss): Addr=%h -> Hit=%b", p_addr, hit);
         end else begin
-            $display("[FAIL] TEST 2 (Miss): Addr=%h -> Hit=%b (Unexpected Hit)", p_addr, hit);
+            $display("[FAIL] Test 2 (Miss): Addr=%h -> Hit=%b (Unexpected Hit)", p_addr, hit);
         end
 
-        // =========================================================
-        // Test 3: Write Operation (Update Tag at Index 2)
-        // Overwrite Index 2's Tag with 0x99999 on posedge clk
-        // =========================================================
-        $display("\n--- Writing New Tag (0x99999) to Index 0x02 ---");
-        wr_en = 1;
-        p_addr = 32'h99999020;
-        #10; // Trigger clock edge write
-        wr_en = 0;
-
-        // =========================================================
-        // Test 4: Hit Test After Write
-        // The previously missing address should now be a HIT
-        // =========================================================
-        p_addr = 32'h99999020;
+        // Test 3: Hit Check at Index 2 (Correct Tag 0x000AB)
+        p_addr = 32'h000AB020;
         #10;
-        if (hit) begin
-            $display("[PASS] TEST 4 (Hit After Write): Addr=%h -> Hit=%b, Data=%h", p_addr, hit, rdata);
+        if (hit && (rdata == 32'hDEADBEEF)) begin
+            $display("[PASS] Test 3 (Hit): Addr=%h -> Hit=%b, Data=%h", p_addr, hit, rdata);
         end else begin
-            $display("[FAIL] TEST 4 (Hit After Write): Addr=%h -> Hit=%b", p_addr, hit);
+            $display("[FAIL] Test 3 (Hit): Addr=%h -> Hit=%b, Data=%h (Expected: DEADBEEF)", p_addr, hit, rdata);
         end
 
         $display("--------------------------------------------------");
