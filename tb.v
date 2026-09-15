@@ -1,86 +1,48 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 
-module tb_pipt_cache_hybrid;
+module tb_prbs;
 
-    // Testbench Signals
-    reg        clk;
-    reg        rst_n;
-    reg [31:0] p_addr;
-    wire [31:0] rdata;
-    wire        hit;
+  reg        clk;
+  reg        rst;
+  reg        load;
+  reg  [7:0] initial_seed;
+  wire       prbs_out;
 
-    // Instantiate Unit Under Test (UUT)
-    pipt_cache_hybrid uut (
-        .clk(clk),
-        .rst_n(rst_n),
-        .p_addr(p_addr),
-        .rdata(rdata),
-        .hit(hit)
-    );
+  // Instantiate the PRBS module
+  prbs uut (
+    .clk          (clk),
+    .rst          (rst),
+    .load         (load),
+    .initial_seed (initial_seed),
+    .prbs_out     (prbs_out)
+  );
 
-    // Clock Generation: 10ns period (100 MHz)
-    always #5 clk = ~clk;
+  // Clock generation (100 MHz)
+  always #5 clk = ~clk;
 
-    initial begin
-        // -------------------------------------------------------------
-        // Step 1: Initialize Inputs
-        // -------------------------------------------------------------
-        clk    = 0;
-        rst_n  = 0;
-        p_addr = 32'h00012000; // Target Index 0 (Pre-loaded Tag: 0x00012)
+  initial begin
+    // Set up VCD waveform dumping
+    $dumpfile("dump.vcd");
+    $dumpvars(0, tb_prbs);
 
-        $display("--------------------------------------------------");
-        $display("   STARTING PIPT CACHE RESET & LOOKUP TESTBENCH   ");
-        $display("--------------------------------------------------");
+    // Set up continuous monitoring of signals to terminal output
+    $monitor("Time=%0t | rst=%b load=%b seed=0h%h | LFSR=8'b%b (0h%h) | prbs_out=%b", 
+             $time, rst, load, initial_seed, uut.lfsr, uut.lfsr, prbs_out);
 
-        // -------------------------------------------------------------
-        // Step 2: Verify Reset Protection (valid_bit = 0)
-        // -------------------------------------------------------------
-        #7; // Inside active reset window
-        if (hit == 1'b0) begin
-            $display("[PASS] During Reset: Hit is suppressed (hit = %b)", hit);
-        end else begin
-            $display("[FAIL] During Reset: Hit asserted unexpectedly (hit = %b)", hit);
-        end
+    // Initial signal states
+    clk = 0;
+    rst = 0;
+    load = 0;
+    initial_seed = 8'hA5;
 
-        // -------------------------------------------------------------
-        // Step 3: Release Reset & Verify Valid Operations
-        // -------------------------------------------------------------
-        #8;
-        rst_n = 1; // De-assert reset (valid_bit becomes 1 on next posedge clk)
-        #10;       // Wait for 1 clock tick
+    // Apply active-low reset release and seed load
+    #20 rst = 1;
+    #10 load = 1;
+    #10 load = 0;
 
-        // Test 1: Hit Check at Index 0 (Tag 0x00012)
-        p_addr = 32'h00012000;
-        #5; // Allow combinational logic to settle
-        if (hit && (rdata == 32'h12345678)) begin
-            $display("[PASS] Test 1 (Hit): Addr=%h -> Hit=%b, Data=%h", p_addr, hit, rdata);
-        end else begin
-            $display("[FAIL] Test 1 (Hit): Addr=%h -> Hit=%b, Data=%h (Expected: 12345678)", p_addr, hit, rdata);
-        end
-
-        // Test 2: Miss Check at Index 2 (Wrong Tag 0x99999)
-        p_addr = 32'h99999020;
-        #10;
-        if (!hit) begin
-            $display("[PASS] Test 2 (Miss): Addr=%h -> Hit=%b", p_addr, hit);
-        end else begin
-            $display("[FAIL] Test 2 (Miss): Addr=%h -> Hit=%b (Unexpected Hit)", p_addr, hit);
-        end
-
-        // Test 3: Hit Check at Index 2 (Correct Tag 0x000AB)
-        p_addr = 32'h000AB020;
-        #10;
-        if (hit && (rdata == 32'hDEADBEEF)) begin
-            $display("[PASS] Test 3 (Hit): Addr=%h -> Hit=%b, Data=%h", p_addr, hit, rdata);
-        end else begin
-            $display("[FAIL] Test 3 (Hit): Addr=%h -> Hit=%b, Data=%h (Expected: DEADBEEF)", p_addr, hit, rdata);
-        end
-
-        $display("--------------------------------------------------");
-        $display("               TESTS COMPLETED                    ");
-        $display("--------------------------------------------------");
-        $finish;
-    end
+    // Run for 200 ns to observe the output sequence
+    #200;
+    $finish;
+  end
 
 endmodule
