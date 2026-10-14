@@ -1,5 +1,4 @@
-# Q. What happens when both the slave stalls and both the main buffer and the skid buffer is full (main_valid == 1) && (Skid_valid == 1) and then the 
-# Slave gives (ready == 1) 
+# Q. What happens when both the slave stalls and both the main buffer and the skid buffer is full (main_valid == 1) && (Skid_valid == 1) and then the Slave gives (ready == 1) 
 
 ``` text
 1. During the stall, the main register held beat A and the skid register captured beat B, which arrived while the upstream hadn’t yet seen the stall (the one-cycle ready latency).
