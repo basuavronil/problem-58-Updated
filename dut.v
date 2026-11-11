@@ -1,5 +1,5 @@
   
-// Fixes applied to the original version:
+// Fixes applied to the original version:   
 //  1. valid_bit was an array of 256 individual flip-flops, all driven by
 //     the same unconditional reset/set logic in a for-loop using a
 //     non-blocking assignment - a pattern Verilator flags as not broadly
