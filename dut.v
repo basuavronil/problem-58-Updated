@@ -1,13 +1,4 @@
-// ============================================================================
-// pipt_cache_hybrid.v  (corrected, original port list preserved)
-//   
-// Scope note: with no fill/write port on this interface, tag_ram and
-// data_ram can only ever be populated once, via $readmemh at elaboration
-// time. That means every line is loaded (or not) identically and at the
-// same time - there is no mechanism by which some lines could be valid
-// and others not. The corrections below reflect that scope honestly,
-// rather than adding ports that weren't part of the original interface.
-//
+
 // Fixes applied to the original version:
 //  1. valid_bit was an array of 256 individual flip-flops, all driven by
 //     the same unconditional reset/set logic in a for-loop using a
