@@ -2,7 +2,7 @@
 //  1. valid_bit was an array of 256 individual flip-flops, all driven by
 //     the same unconditional reset/set logic in a for-loop using a  
 //     non-blocking assignment - a pattern Verilator flags as not broadly
-//     synthesis-safe. Since there is no fill port, every line's validity
+//     synthesis-safe. Since there is no fill port, every line's validity  
 //     is necessarily identical at all times (all invalid during reset,
 //     all valid once reset releases and the $readmemh-loaded contents are
 //     trusted). valid_bit is therefore collapsed to a single flip-flop,
