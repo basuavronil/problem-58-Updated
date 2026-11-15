@@ -6,7 +6,7 @@
 //     is necessarily identical at all times (all invalid during reset,
 //     all valid once reset releases and the $readmemh-loaded contents are    
 //     trusted). valid_bit is therefore collapsed to a single flip-flop,
-//     which is both synthesis-safe and a more honest reflection of what   
+//     which is both synthesis-safe and a more honest reflection of what      
 //     this interface can actually support.
 //  2. The address breakdown implied a 16-byte line (p_addr[3:0] as block
 //     offset) but only one 32-bit word was stored per line, so 12 of
