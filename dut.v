@@ -4,7 +4,7 @@
 //     non-blocking assignment - a pattern Verilator flags as not broadly
 //     synthesis-safe. Since there is no fill port, every line's validity  
 //     is necessarily identical at all times (all invalid during reset,
-//     all valid once reset releases and the $readmemh-loaded contents are
+//     all valid once reset releases and the $readmemh-loaded contents are    
 //     trusted). valid_bit is therefore collapsed to a single flip-flop,
 //     which is both synthesis-safe and a more honest reflection of what   
 //     this interface can actually support.
